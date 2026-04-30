@@ -295,19 +295,25 @@ export default function SettingsScreen() {
       <Pressable
         style={styles.signOut}
         onPress={() => {
-          Alert.alert("Sign out?", undefined, [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Sign out",
-              style: "destructive",
-              onPress: () => {
-                void (async () => {
-                  await signOut();
-                  await refresh();
-                })();
-              },
-            },
-          ]);
+          const doSignOut = () => {
+            void (async () => {
+              await signOut();
+              if (Platform.OS === "web") {
+                window.location.replace("/login");
+              } else {
+                await refresh();
+                router.replace("/(auth)/login");
+              }
+            })();
+          };
+          if (Platform.OS === "web") {
+            if (window.confirm("Sign out?")) doSignOut();
+          } else {
+            Alert.alert("Sign out?", undefined, [
+              { text: "Cancel", style: "cancel" },
+              { text: "Sign out", style: "destructive", onPress: doSignOut },
+            ]);
+          }
         }}
       >
         <Text style={styles.signOutText}>Sign out</Text>
