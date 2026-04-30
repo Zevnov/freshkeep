@@ -2,10 +2,10 @@ import { BucketPicker } from "@/components/add-item/BucketPicker";
 import { RemindersSection } from "@/components/add-item/RemindersSection";
 import { SpoilDateSection } from "@/components/add-item/SpoilDateSection";
 import { StoragePicker } from "@/components/add-item/StoragePicker";
-import { addItemStyles as styles } from "@/components/add-item/styles";
+import { useAddItemStyles } from "@/components/add-item/styles";
 import { useAuth } from "@/context/AuthContext";
 import { useItems } from "@/context/ItemsContext";
-import { colors } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { spoilOnFromShelf, toLocalDateString } from "@/lib/spoil";
 import type { ItemScope, StoragePlace } from "@/types";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
@@ -13,6 +13,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 export default function AddItemScreen() {
+  const { colors } = useTheme();
+  const styles = useAddItemStyles();
   const { id, scan_at, scan_name, scan_qty, scan_unit, scan_notes, scan_code } = useLocalSearchParams<{
     id?: string;
     scan_at?: string;
@@ -185,7 +187,7 @@ export default function AddItemScreen() {
         </Pressable>
       ),
     });
-  }, [navigation, id, saving, onSave]);
+  }, [navigation, id, saving, onSave, colors.primary]);
 
   if (id && !existing) {
     if (itemsLoading) {

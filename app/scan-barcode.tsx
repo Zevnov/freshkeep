@@ -1,4 +1,6 @@
-import { colors, radius, spacing } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
+import type { ThemeColors } from "@/constants/theme";
+import { radius, spacing } from "@/constants/theme";
 import { lookupBarcodeProduct, type BarcodeLookupResult } from "@/lib/barcodeLookup";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
@@ -10,7 +12,87 @@ type ScanRouteParams = {
   itemId?: string;
 };
 
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: "#000" },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    title: { fontSize: 18, fontWeight: "700", color: colors.text },
+    subtitle: { fontSize: 14, color: colors.textMuted, textAlign: "center" },
+    primaryBtn: {
+      marginTop: spacing.sm,
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      paddingHorizontal: spacing.lg,
+      borderRadius: radius.md,
+    },
+    primaryBtnText: { color: colors.onPrimary, fontWeight: "700" },
+    secondaryBtn: { marginTop: spacing.xs, paddingVertical: 10, paddingHorizontal: spacing.md },
+    secondaryBtnText: { color: colors.primary, fontWeight: "600" },
+    overlay: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0,0,0,0.35)",
+      padding: spacing.lg,
+    },
+    overlayTitle: { fontSize: 22, fontWeight: "700", color: colors.overlay },
+    overlaySub: { fontSize: 14, color: colors.overlayMuted, marginTop: spacing.xs },
+    frame: {
+      width: 260,
+      height: 160,
+      borderWidth: 2,
+      borderColor: colors.overlay,
+      borderRadius: radius.md,
+      marginTop: spacing.lg,
+      backgroundColor: "transparent",
+    },
+    controlsRow: {
+      marginTop: spacing.lg,
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    overlayBtn: {
+      borderWidth: 1,
+      borderColor: colors.overlay,
+      paddingVertical: 10,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+    },
+    overlayBtnText: { color: colors.overlay, fontWeight: "700" },
+    resultCard: {
+      width: "100%",
+      marginTop: spacing.lg,
+      backgroundColor: "rgba(20, 30, 20, 0.92)",
+      borderRadius: radius.md,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    resultTitle: { color: colors.overlay, fontSize: 16, fontWeight: "700" },
+    resultMeta: { color: colors.overlayMuted, fontSize: 13 },
+    resultActions: { marginTop: spacing.xs, gap: spacing.xs },
+    resultBtn: {
+      borderWidth: 1,
+      borderColor: colors.overlay,
+      borderRadius: radius.md,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    resultBtnText: { color: colors.overlay, fontWeight: "700" },
+    resultBtnPrimary: { backgroundColor: colors.overlay, borderColor: colors.overlay },
+    resultBtnPrimaryText: { color: colors.primary, fontWeight: "800" },
+  });
+}
+
 export default function ScanBarcodeScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { returnTo, itemId } = useLocalSearchParams<ScanRouteParams>();
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
@@ -115,7 +197,7 @@ export default function ScanBarcodeScreen() {
         <Text style={styles.overlayTitle}>Scan a barcode</Text>
         <Text style={styles.overlaySub}>We will auto-fill what we can.</Text>
         <View style={styles.frame} />
-        {busy ? <ActivityIndicator color="#fff" style={{ marginTop: spacing.md }} /> : null}
+        {busy ? <ActivityIndicator color={colors.overlay} style={{ marginTop: spacing.md }} /> : null}
 
         <View style={styles.controlsRow}>
           <Pressable style={styles.overlayBtn} onPress={() => setTorchOn((v) => !v)}>
@@ -158,79 +240,3 @@ export default function ScanBarcodeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#000" },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  title: { fontSize: 18, fontWeight: "700", color: colors.text },
-  subtitle: { fontSize: 14, color: colors.textMuted, textAlign: "center" },
-  primaryBtn: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-  },
-  primaryBtnText: { color: "#fff", fontWeight: "700" },
-  secondaryBtn: { marginTop: spacing.xs, paddingVertical: 10, paddingHorizontal: spacing.md },
-  secondaryBtnText: { color: colors.primary, fontWeight: "600" },
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.35)",
-    padding: spacing.lg,
-  },
-  overlayTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
-  overlaySub: { fontSize: 14, color: "#f0f0f0", marginTop: spacing.xs },
-  frame: {
-    width: 260,
-    height: 160,
-    borderWidth: 2,
-    borderColor: "#fff",
-    borderRadius: radius.md,
-    marginTop: spacing.lg,
-    backgroundColor: "transparent",
-  },
-  controlsRow: {
-    marginTop: spacing.lg,
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  overlayBtn: {
-    borderWidth: 1,
-    borderColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-  },
-  overlayBtnText: { color: "#fff", fontWeight: "700" },
-  resultCard: {
-    width: "100%",
-    marginTop: spacing.lg,
-    backgroundColor: "rgba(20, 30, 20, 0.92)",
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  resultTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  resultMeta: { color: "#e7f1e7", fontSize: 13 },
-  resultActions: { marginTop: spacing.xs, gap: spacing.xs },
-  resultBtn: {
-    borderWidth: 1,
-    borderColor: "#fff",
-    borderRadius: radius.md,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  resultBtnText: { color: "#fff", fontWeight: "700" },
-  resultBtnPrimary: { backgroundColor: "#fff", borderColor: "#fff" },
-  resultBtnPrimaryText: { color: colors.primary, fontWeight: "800" },
-});
