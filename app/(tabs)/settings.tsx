@@ -32,7 +32,7 @@ function formatDigestTime(hour: number, minute: number): string {
 }
 
 export default function SettingsScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, preference, setPreference } = useTheme();
   const insets = useSafeAreaInsets();
   const pickerTheme = isDark ? "dark" : "light";
   const { configured, user, profile, signOut, updateNotificationPrefs } = useAuth();
@@ -151,6 +151,33 @@ export default function SettingsScreen() {
       </Pressable>
 
       {/* Notifications card */}
+      
+      {/* Appearance section */}
+      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Appearance</Text>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={styles.chipRow}>
+          {(
+            [
+              ['system', 'System'],
+              ['light', 'Light'],
+              ['dark', 'Dark'],
+            ] as const
+          ).map(([key, label]) => {
+            const active = preference === key;
+            return (
+              <Pressable
+                key={key}
+                style={styleChip(active)}
+                onPress={() => setPreference(key)}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: active ? "#fff" : colors.textMuted }}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Notifications</Text>
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         {!nativeNotificationsSupported ? (
