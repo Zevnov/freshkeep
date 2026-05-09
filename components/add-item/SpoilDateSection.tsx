@@ -20,6 +20,8 @@ type Props = {
   shelfDays: string;
   onShelfDaysChange: (v: string) => void;
   spoilOnYmd: string;
+  minExpiryDate: Date;
+  spoilDateWarning: string | null;
 };
 
 export function SpoilDateSection({
@@ -36,6 +38,8 @@ export function SpoilDateSection({
   shelfDays,
   onShelfDaysChange,
   spoilOnYmd,
+  minExpiryDate,
+  spoilDateWarning,
 }: Props) {
   const styles = useAddItemStyles();
   const { colors, isDark } = useTheme();
@@ -68,6 +72,7 @@ export function SpoilDateSection({
             <>
               <DateTimePicker
                 value={expiryDate}
+                minimumDate={minExpiryDate}
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 themeVariant={pickerTheme}
@@ -122,6 +127,7 @@ export function SpoilDateSection({
       )}
 
       <Text style={styles.muted}>Use by: {spoilOnYmd}</Text>
+      {spoilDateWarning ? <Text style={styles.warning}>{spoilDateWarning}</Text> : null}
     </>
   );
 }

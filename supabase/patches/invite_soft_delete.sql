@@ -1,6 +1,55 @@
--- Optional: run in Supabase SQL editor if join_household already exists without the solo-kitchen guard.
--- Replaces public.join_household with the version that blocks joining when you are the only member
--- of your current household and it still has active items.
+-- Run in Supabase SQL editor to switch invites to soft-delete semantics
+-- and serialize invite creation per household.
+
+alter table public.household_invites
+  add column if not exists revoked_at timestamptz;
+
+create unique index if not exists household_invites_one_active_per_household_idx
+  on public.household_invites (household_id)
+  where revoked_at is null;
+
+create or replace function public.create_household_invite()
+returns table (code text, expires_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  hid uuid;
+  new_code text;
+  exp timestamptz;
+begin
+  select p.household_id into hid from public.profiles p where p.id = auth.uid();
+  if hid is null then
+    raise exception 'no_household';
+  end if;
+  if not exists (
+    select 1 from public.household_members hm
+    where hm.household_id = hid and hm.user_id = auth.uid()
+  ) then
+    raise exception 'not_a_member';
+  end if;
+
+  perform public.enforce_invite_write_rate_limit();
+
+  perform 1
+  from public.households
+  where id = hid
+  for update;
+
+  update public.household_invites
+  set revoked_at = now()
+  where household_id = hid
+    and revoked_at is null;
+
+  new_code := upper(substring(replace(gen_random_uuid()::text, '-', '') from 1 for 8));
+  exp := now() + interval '7 days';
+  insert into public.household_invites (household_id, code, expires_at, revoked_at, created_by)
+  values (hid, new_code, exp, null, auth.uid());
+
+  return query select new_code, exp;
+end;
+$$;
 
 create or replace function public.join_household(invite_code text)
 returns jsonb
@@ -72,5 +121,3 @@ begin
   return jsonb_build_object('ok', true, 'household_id', inv.household_id);
 end;
 $$;
-
-grant execute on function public.join_household(text) to authenticated;

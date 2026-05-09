@@ -1,5 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
-import { rescheduleAllItems } from "@/lib/notifications";
+import { normalizeItemName } from "@/lib/itemName";
+import { cancelItemNotifications, rescheduleAllItems } from "@/lib/notifications";
 import { parseItemRow } from "@/lib/supabaseRows";
 import { supabase } from "@/lib/supabase";
 import type { ItemRow, ItemScope, ItemStatus, StoragePlace } from "@/types";
@@ -35,8 +36,9 @@ type ItemsContextValue = {
       remind_me: boolean;
       remind_days_before: number;
       status: ItemStatus;
-      schedule_version: number;
     }>
+    ,
+    expectedScheduleVersion?: number
   ) => Promise<{ error: Error | null; item?: ItemRow }>;
 };
 
@@ -53,10 +55,22 @@ export function ItemsProvider({ children }: { children: React.ReactNode }) {
   itemsRef.current = items;
   profileRef.current = profile;
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const previousItemsRef = useRef<ItemRow[]>([]);
 
   useEffect(() => {
     if (!profile) return;
-    void rescheduleAllItems(items, profile.notification_prefs);
+    const previousItems = previousItemsRef.current;
+    previousItemsRef.current = items;
+
+    void (async () => {
+      const currentIds = new Set(items.map((item) => item.id));
+      for (const oldItem of previousItems) {
+        if (!currentIds.has(oldItem.id)) {
+          await cancelItemNotifications(oldItem.id);
+        }
+      }
+      await rescheduleAllItems(items, profile.notification_prefs);
+    })();
   }, [items, profile]);
 
   const refresh = useCallback(async () => {
@@ -136,7 +150,7 @@ export function ItemsProvider({ children }: { children: React.ReactNode }) {
         household_id: householdId,
         owner_user_id: uid,
         scope: payload.scope,
-        name: payload.name.trim(),
+        name: normalizeItemName(payload.name),
         storage: payload.storage,
         spoil_on: payload.spoil_on,
         quantity: payload.quantity,
@@ -174,27 +188,43 @@ export function ItemsProvider({ children }: { children: React.ReactNode }) {
         remind_me: boolean;
         remind_days_before: number;
         status: ItemStatus;
-        schedule_version: number;
-      }>
+      }>,
+      expectedScheduleVersion?: number
     ) => {
       let p = profile;
       if (!p?.household_id) {
         p = await ensureProfile();
       }
       if (!p?.household_id) return { error: new Error("Missing profile") };
+      const existingItem = itemsRef.current.find((item) => item.id === id);
+      const currentVersion = expectedScheduleVersion ?? existingItem?.schedule_version;
+      if (currentVersion == null) {
+        return { error: new Error("Could not determine the current version of this item. Refresh and try again.") };
+      }
       const nextPatch = {
         ...patch,
+        schedule_version: currentVersion + 1,
         updated_at: new Date().toISOString(),
       };
-      const { data, error: uerr } = await supabase.from("items").update(nextPatch).eq("id", id).select("*").single();
+      const { data, error: uerr } = await supabase
+        .from("items")
+        .update(nextPatch)
+        .eq("id", id)
+        .eq("schedule_version", currentVersion)
+        .select("*")
+        .maybeSingle();
       if (uerr) return { error: new Error(uerr.message) };
+      if (!data) {
+        void refresh();
+        return { error: new Error("This item was changed on another device. Refresh and try again.") };
+      }
       const pr = parseItemRow(data);
       if (!pr.ok) return { error: new Error(`Invalid item from server: ${pr.error}`) };
       const item = pr.value;
       setItems((prev) => prev.map((i) => (i.id === id ? item : i)));
       return { error: null, item };
     },
-    [profile, ensureProfile]
+    [profile, ensureProfile, refresh]
   );
 
   const value = useMemo(

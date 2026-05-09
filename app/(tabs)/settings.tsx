@@ -177,7 +177,7 @@ export default function SettingsScreen() {
       <Pressable style={styles.linkCard} onPress={() => router.push("/join-household")}>
         <Text style={styles.linkTitle}>Join with invite code</Text>
         <Text style={styles.linkSub}>
-          Move your account into a shared kitchen. If you're alone in your current one, clear active items first.
+          Move your account into a shared kitchen. If you&apos;re alone in your current one, clear active items first.
         </Text>
       </Pressable>
 

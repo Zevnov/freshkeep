@@ -20,7 +20,11 @@ type AuthContextValue = {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string
+  ) => Promise<{ error: Error | null; needsEmailConfirmation: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   /** Loads profile from Supabase and updates state; returns it for immediate use (e.g. before insert). */
@@ -159,13 +163,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    return authResult(() =>
-      supabase.auth.signUp({
+    try {
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: { data: { display_name: displayName.trim() } },
-      })
-    );
+      });
+      if (error) return { error: mapAuthNetworkError(new Error(error.message)), needsEmailConfirmation: false };
+      return { error: null, needsEmailConfirmation: !data.session };
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      return { error: mapAuthNetworkError(err), needsEmailConfirmation: false };
+    }
   }, []);
 
   const signOut = useCallback(async () => {

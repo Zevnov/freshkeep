@@ -1,3 +1,4 @@
+import { parseLocalDate, toLocalDateString } from "@/lib/spoil";
 import type { ItemRow, ItemScope, ItemStatus, StoragePlace } from "@/types";
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -59,6 +60,25 @@ function asFiniteNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function parseSpoilOn(raw: unknown): ParseResult<string> {
+  if (raw == null) return { ok: false, error: "missing spoil_on" };
+  if (typeof raw !== "string") return { ok: false, error: `invalid spoil_on type (${typeof raw})` };
+
+  const trimmed = raw.trim();
+  const match = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:$|T|\s)/);
+  if (!match) {
+    return { ok: false, error: `invalid spoil_on format (${trimmed.slice(0, 24)})` };
+  }
+
+  const ymd = match[1];
+  const parsed = parseLocalDate(ymd);
+  if (toLocalDateString(parsed) !== ymd) {
+    return { ok: false, error: `invalid spoil_on date (${ymd})` };
+  }
+
+  return { ok: true, value: ymd };
+}
+
 export function parseItemRow(raw: unknown): ParseResult<ItemRow> {
   if (!isRecord(raw)) return { ok: false, error: "item row is not an object" };
 
@@ -81,10 +101,8 @@ export function parseItemRow(raw: unknown): ParseResult<ItemRow> {
   }
   const storage = storageRaw as StoragePlace;
 
-  const spoilRaw = raw.spoil_on;
-  if (spoilRaw == null) return { ok: false, error: "missing spoil_on" };
-  const spoil_on = String(spoilRaw).slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(spoil_on)) return { ok: false, error: "invalid spoil_on" };
+  const spoil_on = parseSpoilOn(raw.spoil_on);
+  if (!spoil_on.ok) return spoil_on;
 
   const statusRaw = raw.status;
   if (typeof statusRaw !== "string" || !STATUSES.includes(statusRaw as ItemStatus)) {
@@ -106,7 +124,7 @@ export function parseItemRow(raw: unknown): ParseResult<ItemRow> {
       scope,
       name: name.value,
       storage,
-      spoil_on,
+      spoil_on: spoil_on.value,
       quantity: asFiniteNumber(raw.quantity),
       unit: optString(raw.unit),
       notes: optString(raw.notes),

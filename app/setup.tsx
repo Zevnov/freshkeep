@@ -1,6 +1,7 @@
 import { useTheme } from "@/context/ThemeContext";
 import type { ThemeColors } from "@/constants/theme";
 import { spacing } from "@/constants/theme";
+import { supabaseConfigError } from "@/lib/supabase";
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -28,6 +29,11 @@ function createStyles(colors: ThemeColors) {
       fontSize: 14,
       color: colors.text,
     },
+    error: {
+      fontSize: 15,
+      lineHeight: 22,
+      color: "#b42318",
+    },
   });
 }
 
@@ -47,6 +53,7 @@ export default function SetupScreen() {
         Then run the SQL in <Text style={styles.mono}>supabase/schema.sql</Text> in the Supabase SQL editor, restart Expo,
         and return to this app.
       </Text>
+      {supabaseConfigError ? <Text style={styles.error}>Current config issue: {supabaseConfigError}</Text> : null}
     </View>
   );
 }

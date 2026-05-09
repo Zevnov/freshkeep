@@ -27,6 +27,7 @@ export function createAddItemStyles(colors: ThemeColors) {
     label: { marginTop: spacing.md, fontSize: 14, fontWeight: "600", color: colors.textMuted },
     hint: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
     muted: { fontSize: 13, color: colors.primary, fontWeight: "600", marginTop: 4 },
+    warning: { fontSize: 13, color: colors.danger, fontWeight: "600", marginTop: 4 },
     input: {
       borderWidth: 1,
       borderColor: colors.border,

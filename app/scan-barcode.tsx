@@ -4,7 +4,7 @@ import { radius, spacing } from "@/constants/theme";
 import { lookupBarcodeProduct, type BarcodeLookupResult } from "@/lib/barcodeLookup";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 type ScanRouteParams = {
@@ -44,6 +44,12 @@ function createStyles(colors: ThemeColors) {
     },
     overlayTitle: { fontSize: 22, fontWeight: "700", color: colors.overlay },
     overlaySub: { fontSize: 14, color: colors.overlayMuted, marginTop: spacing.xs },
+    busyText: {
+      marginTop: spacing.sm,
+      fontSize: 14,
+      color: colors.overlay,
+      textAlign: "center",
+    },
     frame: {
       width: 260,
       height: 160,
@@ -99,11 +105,22 @@ export default function ScanBarcodeScreen() {
   const [handledCode, setHandledCode] = useState<string | null>(null);
   const [torchOn, setTorchOn] = useState(false);
   const [scanResult, setScanResult] = useState<BarcodeLookupResult | null>(null);
+  const [showSlowLookupHint, setShowSlowLookupHint] = useState(false);
 
   const destination = useMemo(() => {
     const pathname = returnTo === "add-item" ? "/add-item" : "/add-item";
     return pathname;
   }, [returnTo]);
+
+  useEffect(() => {
+    if (!busy) {
+      setShowSlowLookupHint(false);
+      return;
+    }
+
+    const timeout = setTimeout(() => setShowSlowLookupHint(true), 2500);
+    return () => clearTimeout(timeout);
+  }, [busy]);
 
   const goBackWithResult = useCallback(
     (payload: {
@@ -197,7 +214,14 @@ export default function ScanBarcodeScreen() {
         <Text style={styles.overlayTitle}>Scan a barcode</Text>
         <Text style={styles.overlaySub}>We will auto-fill what we can.</Text>
         <View style={styles.frame} />
-        {busy ? <ActivityIndicator color={colors.overlay} style={{ marginTop: spacing.md }} /> : null}
+        {busy ? (
+          <>
+            <ActivityIndicator color={colors.overlay} style={{ marginTop: spacing.md }} />
+            <Text style={styles.busyText}>
+              {showSlowLookupHint ? "Still looking up product details. This is taking longer than usual." : "Looking up product details..."}
+            </Text>
+          </>
+        ) : null}
 
         <View style={styles.controlsRow}>
           <Pressable style={styles.overlayBtn} onPress={() => setTorchOn((v) => !v)}>

@@ -120,7 +120,7 @@ export default function ItemDetailScreen() {
         style: status === "consumed" ? "default" : "destructive",
         onPress: () => {
           void (async () => {
-            const { error } = await updateItem(itemId, { status });
+            const { error } = await updateItem(itemId, { status }, detailItem.schedule_version);
             if (error) Alert.alert("Could not update", error.message);
             else router.back();
           })();

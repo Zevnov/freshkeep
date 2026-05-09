@@ -118,7 +118,14 @@ export default function HouseholdScreen() {
       await Promise.all([
         supabase.from("households").select("name").eq("id", hid).maybeSingle(),
         supabase.from("household_members").select("user_id, role").eq("household_id", hid),
-        supabase.from("household_invites").select("code, expires_at").eq("household_id", hid).maybeSingle(),
+        supabase
+          .from("household_invites")
+          .select("code, expires_at")
+          .eq("household_id", hid)
+          .is("revoked_at", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
     if (hhErr) {
@@ -289,7 +296,7 @@ export default function HouseholdScreen() {
         <Text style={styles.secondaryBtnText}>Join a different household</Text>
       </Pressable>
       <Text style={styles.joinFootnote}>
-        Solo kitchen? Finish or discard active items first; you can't join elsewhere until your current list is clear.
+        Solo kitchen? Finish or discard active items first; you can&apos;t join elsewhere until your current list is clear.
       </Text>
     </ScrollView>
   );

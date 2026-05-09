@@ -112,7 +112,7 @@ export default function JoinHouseholdScreen() {
           multiple people.
         </Text>
         <Text style={styles.note}>
-          If you're the only one in your kitchen, clear active items (use or discard) before joining another household so
+          If you&apos;re the only one in your kitchen, clear active items (use or discard) before joining another household so
           nothing is left behind.
         </Text>
         <Text style={styles.label}>Invite code</Text>

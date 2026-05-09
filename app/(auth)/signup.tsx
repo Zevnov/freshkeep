@@ -78,16 +78,20 @@ export default function SignupScreen() {
       return;
     }
     setBusy(true);
-    const { error } = await signUp(email, password, displayName.trim());
+    const { error, needsEmailConfirmation } = await signUp(email, password, displayName.trim());
     setBusy(false);
     if (error) {
       Alert.alert("Sign up failed", error.message);
       return;
     }
-    Alert.alert(
-      "Check your inbox",
-      "If email confirmation is enabled in Supabase, confirm your email before signing in."
-    );
+    if (needsEmailConfirmation) {
+      Alert.alert(
+        "Check your inbox",
+        "Confirm your email to finish creating your account before signing in."
+      );
+      return;
+    }
+    Alert.alert("Account created", "Your account is ready.");
   }
 
   if (loading) {

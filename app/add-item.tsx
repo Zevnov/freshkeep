@@ -6,11 +6,15 @@ import { useAddItemStyles } from "@/components/add-item/styles";
 import { useAuth } from "@/context/AuthContext";
 import { useItems } from "@/context/ItemsContext";
 import { useTheme } from "@/context/ThemeContext";
+import { MAX_ITEM_NAME_LENGTH, hasVisibleItemName, normalizeItemName } from "@/lib/itemName";
 import { spoilOnFromShelf, toLocalDateString } from "@/lib/spoil";
 import type { ItemScope, StoragePlace } from "@/types";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+
+const MAX_REMIND_DAYS = 365;
+const QUANTITY_PATTERN = /^(?:\d+\.?\d*|\.\d+)$/;
 
 export default function AddItemScreen() {
   const { colors } = useTheme();
@@ -78,7 +82,7 @@ export default function AddItemScreen() {
     const scannedCode = typeof scan_code === "string" ? scan_code.trim() : "";
 
     if (scannedName) setName(scannedName);
-    if (scannedQty && !Number.isNaN(Number(scannedQty))) setQuantity(scannedQty);
+    if (scannedQty && QUANTITY_PATTERN.test(scannedQty)) setQuantity(scannedQty);
     if (scannedUnit) setUnit(scannedUnit);
     if (scannedNotes) setNotes((prev) => (prev.trim() ? `${prev}\n${scannedNotes}` : scannedNotes));
     if (scannedCode) setNotes((prev) => (prev.includes(`Barcode: ${scannedCode}`) ? prev : `${prev}\nBarcode: ${scannedCode}`.trim()));
@@ -98,37 +102,46 @@ export default function AddItemScreen() {
     const days = Math.max(1, parseInt(shelfDays, 10) || 1);
     return spoilOnFromShelf(toLocalDateString(referenceDate), days);
   }, [spoilMode, expiryDate, referenceDate, shelfDays]);
+  const today = useMemo(() => new Date(), []);
+  const todayYmd = useMemo(() => toLocalDateString(today), [today]);
+  const spoilDateWarning = useMemo(() => {
+    if (spoilOnYmd >= todayYmd) return null;
+    return spoilMode === "expiry"
+      ? "Past spoil dates cannot be saved."
+      : "This shelf-life calculation lands in the past. Pick a more recent date or a longer shelf life.";
+  }, [spoilMode, spoilOnYmd, todayYmd]);
 
   const onSave = useCallback(async () => {
-    if (!name.trim()) {
+    const normalizedName = normalizeItemName(name);
+    if (!hasVisibleItemName(normalizedName)) {
       Alert.alert("Name required", "Give this item a name.");
       return;
     }
-    const q = quantity.trim() ? Number(quantity) : null;
-    if (quantity.trim() && Number.isNaN(q)) {
-      Alert.alert("Quantity", "Use a number for quantity.");
+    if (normalizedName.length > MAX_ITEM_NAME_LENGTH) {
+      Alert.alert("Name too long", `Keep the item name under ${MAX_ITEM_NAME_LENGTH} characters.`);
       return;
     }
+    if (spoilOnYmd < todayYmd) {
+      Alert.alert("Spoil date", "Choose today or a future date for the spoil date.");
+      return;
+    }
+    const trimmedQuantity = quantity.trim();
+    if (trimmedQuantity && !QUANTITY_PATTERN.test(trimmedQuantity)) {
+      Alert.alert("Quantity", "Use a plain number for quantity.");
+      return;
+    }
+    const q = trimmedQuantity ? Number(trimmedQuantity) : null;
     const rd = parseInt(remindDays, 10);
+    if (Number.isFinite(rd) && rd > MAX_REMIND_DAYS) {
+      Alert.alert("Reminder days", `Choose ${MAX_REMIND_DAYS} days or fewer.`);
+      return;
+    }
     const remindDaysBefore = Number.isFinite(rd) && rd > 0 ? rd : 0;
 
     setSaving(true);
     if (id && existing) {
-      const init = initialRef.current;
-      let scheduleVersion = existing.schedule_version;
-      if (
-        init &&
-        (init.spoil_on !== spoilOnYmd ||
-          init.remind_me !== remindMe ||
-          init.remind_days_before !== remindDaysBefore ||
-          init.scope !== scope ||
-          init.name !== name.trim() ||
-          init.storage !== storage)
-      ) {
-        scheduleVersion = existing.schedule_version + 1;
-      }
       const { error } = await updateItem(id, {
-        name: name.trim(),
+        name: normalizedName,
         scope,
         storage,
         spoil_on: spoilOnYmd,
@@ -137,14 +150,13 @@ export default function AddItemScreen() {
         notes: notes.trim() || null,
         remind_me: remindMe,
         remind_days_before: remindDaysBefore,
-        schedule_version: scheduleVersion,
-      });
+      }, existing.schedule_version);
       setSaving(false);
       if (error) Alert.alert("Could not save", error.message);
       else router.back();
     } else {
       const { error } = await createItem({
-        name: name.trim(),
+        name: normalizedName,
         scope,
         storage,
         spoil_on: spoilOnYmd,
@@ -168,6 +180,7 @@ export default function AddItemScreen() {
     id,
     existing,
     spoilOnYmd,
+    todayYmd,
     scope,
     storage,
     createItem,
@@ -214,6 +227,7 @@ export default function AddItemScreen() {
         style={styles.input}
         value={name}
         onChangeText={setName}
+        maxLength={MAX_ITEM_NAME_LENGTH}
         placeholder="Strawberries"
         placeholderTextColor={colors.textMuted}
       />
@@ -242,6 +256,8 @@ export default function AddItemScreen() {
         shelfDays={shelfDays}
         onShelfDaysChange={setShelfDays}
         spoilOnYmd={spoilOnYmd}
+        minExpiryDate={today}
+        spoilDateWarning={spoilDateWarning}
       />
 
       <Text style={styles.label}>Quantity (optional)</Text>

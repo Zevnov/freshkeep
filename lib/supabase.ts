@@ -8,9 +8,38 @@ const extra = Constants.expoConfig?.extra as { supabaseUrl?: string; supabaseAno
 const url = (process.env.EXPO_PUBLIC_SUPABASE_URL || extra?.supabaseUrl || "").trim();
 const anonKey = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || extra?.supabaseAnonKey || "").trim();
 
-export const isSupabaseConfigured = Boolean(url && anonKey);
+function validateSupabaseConfig(rawUrl: string, rawAnonKey: string): string | null {
+  if (!rawUrl) return "Missing EXPO_PUBLIC_SUPABASE_URL.";
+  if (!rawAnonKey) return "Missing EXPO_PUBLIC_SUPABASE_ANON_KEY.";
 
-export const supabase = createClient(url || "https://placeholder.supabase.co", anonKey || "placeholder", {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return "EXPO_PUBLIC_SUPABASE_URL is not a valid URL.";
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return "EXPO_PUBLIC_SUPABASE_URL must start with http:// or https://.";
+  }
+  if (!parsed.hostname) {
+    return "EXPO_PUBLIC_SUPABASE_URL is missing a hostname.";
+  }
+  if (/\s/.test(rawUrl)) {
+    return "EXPO_PUBLIC_SUPABASE_URL cannot contain spaces.";
+  }
+  if (/\s/.test(rawAnonKey)) {
+    return "EXPO_PUBLIC_SUPABASE_ANON_KEY cannot contain spaces.";
+  }
+  return null;
+}
+
+export const supabaseConfigError = validateSupabaseConfig(url, anonKey);
+export const isSupabaseConfigured = !supabaseConfigError;
+const clientUrl = isSupabaseConfigured ? url : "https://placeholder.supabase.co";
+const clientAnonKey = isSupabaseConfigured ? anonKey : "placeholder";
+
+export const supabase = createClient(clientUrl, clientAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
