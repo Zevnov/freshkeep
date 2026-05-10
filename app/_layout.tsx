@@ -3,10 +3,23 @@ import "react-native-gesture-handler";
 import { AuthProvider } from "@/context/AuthContext";
 import { ItemsProvider } from "@/context/ItemsContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import * as Sentry from "@sentry/react-native";
+import Constants from "expo-constants";
 import { ensureNotificationChannel } from "@/lib/notifications";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
+
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
+
+Sentry.init({
+  dsn: sentryDsn || undefined,
+  enabled: Boolean(sentryDsn),
+  debug: __DEV__,
+  environment: __DEV__ ? "development" : "production",
+  release: Constants.expoConfig?.version ? `freshkeep@${Constants.expoConfig.version}` : undefined,
+  tracesSampleRate: 1.0,
+});
 
 function RootStack() {
   const { colors, isDark } = useTheme();
@@ -35,7 +48,7 @@ function RootStack() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   useEffect(() => {
     void ensureNotificationChannel();
   }, []);
@@ -50,3 +63,5 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
