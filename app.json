@@ -37,7 +37,8 @@
         {
           "sounds": []
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

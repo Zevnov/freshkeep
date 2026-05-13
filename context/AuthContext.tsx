@@ -2,7 +2,11 @@ import type { NotificationPrefs, ItemScope, StoragePlace } from "@/types";
 import { DEFAULT_NOTIFICATION_PREFS } from "@/types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export type Profile = {
   id: string;
@@ -25,6 +29,7 @@ type AuthContextValue = {
     password: string,
     displayName: string
   ) => Promise<{ error: Error | null; needsEmailConfirmation: boolean }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   /** Loads profile from Supabase and updates state; returns it for immediate use (e.g. before insert). */
@@ -53,6 +58,14 @@ async function authResult(fn: () => Promise<{ error: { message: string } | null 
     const err = e instanceof Error ? e : new Error(String(e));
     return { error: mapAuthNetworkError(err) };
   }
+}
+
+function readOAuthParam(callbackUrl: string, name: string): string | null {
+  const parsed = new URL(callbackUrl);
+  const fromQuery = parsed.searchParams.get(name);
+  if (fromQuery) return fromQuery;
+  const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+  return new URLSearchParams(hash).get(name);
 }
 
 function clampInt(n: unknown, min: number, max: number, fallback: number): number {
@@ -177,6 +190,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      const redirectTo = Linking.createURL("auth/callback");
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) return { error: mapAuthNetworkError(new Error(error.message)) };
+      if (!data.url) return { error: new Error("Supabase did not return a Google sign-in URL.") };
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== "success") return { error: null };
+
+      const errorDescription = readOAuthParam(result.url, "error_description");
+      if (errorDescription) return { error: new Error(errorDescription) };
+
+      const code = readOAuthParam(result.url, "code");
+      if (!code) return { error: new Error("Google sign-in did not return an authorization code.") };
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) return { error: mapAuthNetworkError(new Error(exchangeError.message)) };
+
+      return { error: null };
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      return { error: mapAuthNetworkError(err) };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -210,12 +256,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       signIn,
       signUp,
+      signInWithGoogle,
       signOut,
       refreshProfile,
       ensureProfile,
       updateNotificationPrefs,
     }),
-    [configured, session, profile, loading, signIn, signUp, signOut, refreshProfile, ensureProfile, updateNotificationPrefs]
+    [
+      configured,
+      session,
+      profile,
+      loading,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      signOut,
+      refreshProfile,
+      ensureProfile,
+      updateNotificationPrefs,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
