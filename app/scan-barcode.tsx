@@ -28,7 +28,7 @@ export default function ScanBarcodeScreen() {
   const [scanResult, setScanResult] = useState<BarcodeLookupResult | null>(null);
 
   const destination = useMemo(() => {
-    return "/add-item";
+    return "/add-item" as const;
   }, []);
 
   const goBackWithResult = useCallback(
@@ -40,7 +40,7 @@ export default function ScanBarcodeScreen() {
       notes: string | null;
     }) => {
       router.replace({
-        pathname: destination as any,
+        pathname: destination,
         params: {
           ...(itemId ? { id: itemId } : {}),
           scan_code: payload.barcode,
@@ -94,10 +94,17 @@ export default function ScanBarcodeScreen() {
           onPress={() => {
             void requestPermission();
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Allow camera access"
         >
           <Text style={styles.primaryBtnText}>Allow camera</Text>
         </Pressable>
-        <Pressable style={{ marginTop: 16 }} onPress={() => router.back()}>
+        <Pressable
+          style={{ marginTop: 16 }}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+        >
           <Text style={{ color: colors.textMuted, fontWeight: "600" }}>Cancel</Text>
         </Pressable>
       </View>
@@ -133,10 +140,20 @@ export default function ScanBarcodeScreen() {
         {busy && <ActivityIndicator color="#fff" style={{ marginTop: 30 }} />}
 
         <View style={styles.controlsRow}>
-          <Pressable style={styles.overlayBtn} onPress={() => setTorchOn((v) => !v)}>
+          <Pressable
+            style={styles.overlayBtn}
+            onPress={() => setTorchOn((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={torchOn ? "Turn torch off" : "Turn torch on"}
+          >
             <Text style={styles.overlayBtnText}>{torchOn ? "🔦 Off" : "🔦 On"}</Text>
           </Pressable>
-          <Pressable style={styles.overlayBtn} onPress={() => router.back()}>
+          <Pressable
+            style={styles.overlayBtn}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel scanning"
+          >
             <Text style={styles.overlayBtnText}>Cancel</Text>
           </Pressable>
         </View>
@@ -162,10 +179,20 @@ export default function ScanBarcodeScreen() {
             <Text style={{ color: colors.textMuted, fontSize: 13 }}>Barcode: {scanResult.barcode}</Text>
             
             <View style={styles.resultActions}>
-              <Pressable style={[styles.resultBtn, { backgroundColor: colors.brandBtn }]} onPress={() => goBackWithResult(scanResult)}>
+              <Pressable
+                style={[styles.resultBtn, { backgroundColor: colors.brandBtn }]}
+                onPress={() => goBackWithResult(scanResult)}
+                accessibilityRole="button"
+                accessibilityLabel="Use this product"
+              >
                 <Text style={{ color: "#fff", fontWeight: "700" }}>Use this product</Text>
               </Pressable>
-              <Pressable style={[styles.resultBtn, { backgroundColor: colors.faint }]} onPress={resetScan}>
+              <Pressable
+                style={[styles.resultBtn, { backgroundColor: colors.faint }]}
+                onPress={resetScan}
+                accessibilityRole="button"
+                accessibilityLabel="Scan again"
+              >
                 <Text style={{ color: colors.text, fontWeight: "600" }}>Scan again</Text>
               </Pressable>
             </View>

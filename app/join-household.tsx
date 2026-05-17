@@ -23,6 +23,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type JoinResult = { ok: boolean; error?: string; already_member?: boolean };
 
+function isJoinResult(v: unknown): v is JoinResult {
+  return v != null && typeof v === 'object' && typeof (v as Record<string, unknown>).ok === 'boolean';
+}
+
 function joinErrorMessage(code: string | undefined): string {
   switch (code) {
     case "invalid_or_expired_code":
@@ -58,7 +62,7 @@ export default function JoinHouseholdScreen() {
         else Alert.alert("Could not join", error.message);
         return;
       }
-      const res = data as JoinResult | null;
+      const res = isJoinResult(data) ? data : null;
       if (!res?.ok) {
         const msg = joinErrorMessage(res?.error);
         if (Platform.OS === "web") window.alert(msg);
@@ -168,6 +172,7 @@ export default function JoinHouseholdScreen() {
             autoCorrect={false}
             placeholder="E.g. A1B2C3D4"
             placeholderTextColor={colors.textMuted}
+            accessibilityLabel="Invite code"
           />
           <Pressable
             style={[

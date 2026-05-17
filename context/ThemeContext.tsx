@@ -1,5 +1,5 @@
 import { darkColors, lightColors, type ThemeColors } from "@/constants/theme";
-import { createContext, useContext, useMemo, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, useEffect, useRef, type ReactNode } from "react";
 import { useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -21,18 +21,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
   const [preference, setPreference] = useState<ThemePreference>('system');
   const [isLoading, setIsLoading] = useState(true);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const loadPreference = async () => {
-  try {
+      try {
         const storedPreference = await AsyncStorage.getItem('freshkeep-theme-pref');
-        if (storedPreference) {
-          setPreference(storedPreference as ThemePreference);
+        if (!mountedRef.current) return;
+        if (storedPreference === 'system' || storedPreference === 'light' || storedPreference === 'dark') {
+          setPreference(storedPreference);
         }
       } catch (e) {
         console.error("Failed to load theme preference:", e);
       } finally {
-        setIsLoading(false);
+        if (mountedRef.current) setIsLoading(false);
       }
     };
 

@@ -14,7 +14,13 @@ export function BucketPicker({ scope, onChange }: Props) {
       <Text style={styles.label}>Bucket</Text>
       <View style={styles.row}>
         {(["ours", "mine"] as const).map((s) => (
-          <Pressable key={s} onPress={() => onChange(s)} style={[styles.chip, scope === s && styles.chipOn]}>
+          <Pressable
+            key={s}
+            onPress={() => onChange(s)}
+            style={[styles.chip, scope === s && styles.chipOn]}
+            accessibilityRole="button"
+            accessibilityLabel={s === "ours" ? "Ours bucket" : "My bucket"}
+          >
             <Text style={[styles.chipText, scope === s && styles.chipTextOn]}>{s === "ours" ? "Ours" : "My"}</Text>
           </Pressable>
         ))}

@@ -86,6 +86,12 @@ function mergePrefs(raw: unknown): NotificationPrefs {
   };
 }
 
+const VALID_STORAGE_PLACES: readonly StoragePlace[] = ["fridge", "freezer", "pantry", "counter"];
+
+function isStoragePlace(v: string): v is StoragePlace {
+  return (VALID_STORAGE_PLACES as readonly string[]).includes(v);
+}
+
 function mapProfile(row: {
   id: string;
   display_name: string | null;
@@ -99,7 +105,7 @@ function mapProfile(row: {
     display_name: row.display_name,
     household_id: row.household_id,
     default_bucket: row.default_bucket === "mine" ? "mine" : "ours",
-    default_storage: row.default_storage as StoragePlace,
+    default_storage: isStoragePlace(row.default_storage) ? row.default_storage : "fridge",
     notification_prefs: mergePrefs(row.notification_settings),
   };
 }

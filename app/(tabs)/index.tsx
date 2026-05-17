@@ -122,7 +122,7 @@ export default function HomeScreen() {
 
   const hero = filtered[0] ?? null;
 
-  const renderHero = () => {
+  const renderHero = useCallback(() => {
     if (!hero) return null;
     const band = computeFreshnessBand(hero.spoil_on, soonDays, todayYmd);
     const days = daysUntilSpoil(hero.spoil_on, todayYmd);
@@ -134,6 +134,8 @@ export default function HomeScreen() {
           router.push({ pathname: "/item/[id]", params: { id: hero.id } })
         }
         style={[styles.heroCard, { backgroundColor: bg }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${hero.name}, eat me first`}
       >
         {/* Sticker pill */}
         <View
@@ -175,9 +177,9 @@ export default function HomeScreen() {
         </Text>
       </Pressable>
     );
-  };
+  }, [hero, soonDays, todayYmd, colors]);
 
-  const renderItem = ({ item }: { item: ItemRow }) => {
+  const renderItem = useCallback(({ item }: { item: ItemRow }) => {
     const band = computeFreshnessBand(item.spoil_on, soonDays, todayYmd);
     const days = daysUntilSpoil(item.spoil_on, todayYmd);
     const bg = colors.bandBg[band];
@@ -188,6 +190,8 @@ export default function HomeScreen() {
           router.push({ pathname: "/item/[id]", params: { id: item.id } })
         }
         style={[styles.itemCard, { backgroundColor: bg }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}, ${BAND_LABEL[band]}`}
       >
         <View style={{ flex: 1 }}>
           <Text
@@ -215,9 +219,9 @@ export default function HomeScreen() {
         />
       </Pressable>
     );
-  };
+  }, [soonDays, todayYmd, colors]);
 
-  const listHeader = (
+  const listHeader = useCallback(() => (
     <>
       {/* Page header */}
       <View style={styles.header}>
@@ -297,6 +301,8 @@ export default function HomeScreen() {
                   backgroundColor: active ? colors.brand : colors.faint,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={key === "all" ? "Show all items" : key === "ours" ? "Show shared items" : "Show my items"}
             >
               <Text
                 style={{
@@ -312,7 +318,7 @@ export default function HomeScreen() {
         })}
       </View>
     </>
-  );
+  ), [displayName, counts, colors, filter, renderHero]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>

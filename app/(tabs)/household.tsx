@@ -106,6 +106,7 @@ export default function HouseholdScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [inviteBusy, setInviteBusy] = useState(false);
   const showInitialSpinner = useRef(true);
+  const focusActiveRef = useRef(false);
 
   const load = useCallback(async (withSpinner: boolean) => {
     if (!user?.id || !profile?.household_id) {
@@ -129,6 +130,8 @@ export default function HouseholdScreen() {
             .limit(1)
             .maybeSingle(),
         ]);
+
+      if (!focusActiveRef.current) return;
 
       if (hhErr) {
         Alert.alert("Could not load household", hhErr.message);
@@ -190,16 +193,22 @@ export default function HouseholdScreen() {
     } catch (err) {
       Sentry.captureException(err);
     } finally {
-      if (withSpinner) setLoading(false);
-      setRefreshing(false);
+      if (focusActiveRef.current) {
+        if (withSpinner) setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [user?.id, profile?.household_id]);
 
   useFocusEffect(
     useCallback(() => {
+      focusActiveRef.current = true;
       const first = showInitialSpinner.current;
       showInitialSpinner.current = false;
       load(first).catch((err) => Sentry.captureException(err));
+      return () => {
+        focusActiveRef.current = false;
+      };
     }, [load])
   );
 

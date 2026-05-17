@@ -16,7 +16,13 @@ export function StoragePicker({ storage, onChange }: Props) {
       <Text style={styles.label}>Storage</Text>
       <View style={styles.wrap}>
         {STORAGE_OPTIONS.map((s) => (
-          <Pressable key={s} onPress={() => onChange(s)} style={[styles.chip, storage === s && styles.chipOn]}>
+          <Pressable
+            key={s}
+            onPress={() => onChange(s)}
+            style={[styles.chip, storage === s && styles.chipOn]}
+            accessibilityRole="button"
+            accessibilityLabel={`${s.charAt(0).toUpperCase() + s.slice(1)} storage`}
+          >
             <Text style={[styles.chipText, storage === s && styles.chipTextOn]}>
               {s.charAt(0).toUpperCase() + s.slice(1)}
             </Text>
